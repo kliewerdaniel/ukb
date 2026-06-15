@@ -1,0 +1,151 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Knowledge Base Specification File
+# ═══════════════════════════════════════════════════════════════════════════════
+# This file defines what your knowledge base contains and how it should be
+# built. The start.sh script reads this file and generates all indexes,
+# embeddings, and the web UI automatically.
+#
+# Usage:
+#   ./start.sh ex.sspec
+#
+# Format:
+#   Simple key-value pairs. Multi-line values end with a blank line or EOF.
+#   Lines starting with # are comments.
+#   Sections are denoted by [section_name].
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Metadata
+# ─────────────────────────────────────────────────────────────────────────────
+
+[kb]
+name: My Knowledge Base
+description: A searchable knowledge base for my domain-specific documents.
+version: 1.0.0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Source Configuration
+# ─────────────────────────────────────────────────────────────────────────────
+# Sources: directories or files containing your markdown documents.
+# Paths are relative to the directory where start.sh is run.
+# Supports: local directories, local files, or git repos (cloned automatically).
+
+[sources]
+# Local directory of markdown files (recursively scanned)
+dir: ./sources
+
+# OR: list individual files (one per line, relative to cwd)
+# files:
+#   ./docs/introduction.md
+#   ./docs/architecture.md
+#   ./docs/api-reference.md
+
+# OR: git repository to clone
+# git: https://github.com/user/repo.git
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Categories
+# ─────────────────────────────────────────────────────────────────────────────
+# Define how your documents are organized. Each category maps to a subdirectory
+# under kbmd/ and has a chunking strategy.
+
+[categories]
+# Format: category_name = strategy
+# Strategies:
+#   chapter        - Split by ## headers (good for books, manuals)
+#   section        - Split by ## headers with size limits
+#   paragraph      - Split by paragraph groups (~20-30 paragraphs each)
+#   line           - One chunk per line (for structured data)
+#   file           - One chunk per file (for small files)
+#   none           - Don't chunk (for very small files)
+
+default: chapter
+# Override per subdirectory:
+# docs: section
+# api: paragraph
+# guides: chapter
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Topics
+# ─────────────────────────────────────────────────────────────────────────────
+# Topics to index. Each topic has seed keywords that the topic indexer
+# uses to map chunks to topics. Format: topic_name = keyword1, keyword2, ...
+
+[topics]
+general = overview, introduction, summary, overview
+architecture = architecture, design, structure, system design, components
+api = api, endpoint, request, response, rest, graphql, interface
+deployment = deploy, deployment, infrastructure, server, hosting
+testing = test, testing, unit test, integration test, validation
+configuration = config, configuration, settings, setup, environment
+troubleshooting = error, issue, problem, debug, fix, workaround
+security = security, auth, authentication, authorization, encryption, token
+performance = performance, optimization, speed, latency, caching
+database = database, db, sql, query, schema, migration
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Reference Extraction (Optional)
+# ─────────────────────────────────────────────────────────────────────────────
+# Define cross-reference patterns to extract. These build citation graphs
+# between your documents. Leave empty to skip reference extraction.
+
+[references]
+# Regex patterns to match references. Each line: label = regex_pattern
+# Use named groups: (?P<id>...) for the referenced document/section ID
+# Example patterns for a software project:
+# issue = #(?P<id>\d+)
+# doc = doc:(?P<id>[\w-]+)
+# pr = PR\s+(?P<id>\d+)
+
+# Example patterns for a legal/regulatory corpus:
+# section = Section\s+(?P<id>[\d.]+)
+# regulation = Reg\.\s+(?P<id>[\d.]+)
+
+# Example patterns for academic papers:
+# citation = \[(?P<id>[A-Z]+\d{4})\]
+# doi = doi:(?P<id>10\.\d+/[\w.]+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LLM Configuration
+# ─────────────────────────────────────────────────────────────────────────────
+
+[llm]
+# System prompt for the LLM when answering questions.
+# The LLM receives this prompt + retrieved context + the user's question.
+# Use {kb_name} and {kb_description} as placeholders.
+system_prompt: >
+  You are a knowledgeable research assistant for the "{kb_name}" knowledge base.
+  Your role is to answer questions using the provided document excerpts.
+
+  RULES:
+  1. Every claim MUST cite its source (document + section/chapter).
+  2. If the provided sources are insufficient, say so honestly. Never fabricate information.
+  3. Distinguish between what the sources explicitly state vs. your inference.
+  4. When sources conflict or are ambiguous, note the tension.
+  5. Be concise but thorough. Prioritize accuracy over length.
+  6. Reference documents by their title and section/chapter when possible.
+
+# Chat model (Ollama). Leave empty for auto-detect.
+chat_model: ""
+
+# Embedding model (Ollama). Leave empty for default.
+embed_model: nomic-embed-text
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Web UI
+# ─────────────────────────────────────────────────────────────────────────────
+
+[web]
+port: 8080
+host: 127.0.0.1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Build Options
+# ─────────────────────────────────────────────────────────────────────────────
+
+[build]
+# Skip embedding generation (faster build, no semantic search)
+skip_embeddings: false
+
+# Max tokens per chunk (default: 2000)
+max_chunk_tokens: 2000
