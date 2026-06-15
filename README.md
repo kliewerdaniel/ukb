@@ -105,7 +105,7 @@ your-project/
 │   ├── embeddings/        # Vector index (index.bin + chunks.json)
 │   ├── topic-index.json   # Topic → document mapping
 │   ├── cross-references.json
-└── kb-tools/              # Query tools (copied from money01)
+└── kb-tools/              # Query tools
     ├── engine.py          # Shared query engine
     ├── server.py          # Flask web server
     ├── templates/index.html

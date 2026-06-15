@@ -488,10 +488,12 @@ CONFJSON
 log "Config written to $KB_CONFIG"
 
 # ─── Patch Python Tools for Generic Use ──────────────────────────────────────
+# These patchers replace any hardcoded domain-specific content in the tools
+# with values from the .sspec configuration, making the system universal.
 
 step "Patching tools for generic use"
 
-# Patch build-topic-index.py to use custom topics
+# Patch build-topic-index.py to use custom topics from the spec
 if [[ -f "$KB_TOOLS/build-topic-index.py" && -f "$TOPICS_JSON" ]]; then
     python3 - "$KB_TOOLS/build-topic-index.py" "$TOPICS_JSON" <<'PYPATCH'
 import json, sys, re
@@ -500,22 +502,17 @@ from pathlib import Path
 tool_path = Path(sys.argv[1])
 topics_path = Path(sys.argv[2])
 
-# Load custom topics
 with open(topics_path) as f:
     custom_topics = json.load(f)
 
-# Read the tool
 content = tool_path.read_text()
 
-# Build new TOPIC_SEEDS block
 new_seeds = "TOPIC_SEEDS = {\n"
 for topic, keywords in custom_topics.items():
     kw_list = ", ".join(f'"{k}"' for k in keywords)
     new_seeds += f'    "{topic}": [{kw_list}],\n'
 new_seeds += "}\n"
 
-# Replace using regex: match from "TOPIC_SEEDS = {" through the closing "}"
-# This handles nested braces correctly
 pattern = r'TOPIC_SEEDS = \{[^}]*(?:\{[^}]*\}[^}]*)*\}'
 content_new, count = re.subn(pattern, new_seeds.rstrip(), content, count=1)
 
@@ -523,7 +520,6 @@ if count > 0:
     tool_path.write_text(content_new)
     print(f"  Patched build-topic-index.py with {len(custom_topics)} topics")
 else:
-    # Fallback: replace from TOPIC_SEEDS line to the next def or class
     lines = content.split('\n')
     new_lines = []
     skip = False
@@ -543,7 +539,7 @@ else:
 PYPATCH
 fi
 
-# Patch engine.py to use generic system prompt
+# Patch engine.py to use the system prompt from the spec
 if [[ -f "$KB_TOOLS/engine.py" ]]; then
     python3 - "$KB_TOOLS/engine.py" "$SYSTEM_PROMPT" <<'PYENGINE'
 import sys
@@ -554,7 +550,6 @@ new_prompt = sys.argv[2]
 
 content = tool_path.read_text()
 
-# Replace SYSTEM_PROMPT
 old_start = 'SYSTEM_PROMPT = """'
 old_end = '"""'
 idx_start = content.find(old_start)
@@ -572,38 +567,51 @@ else:
 PYENGINE
 fi
 
-# Patch server.py to use KB name
+# Patch server.py to use the KB name from the spec
 if [[ -f "$KB_TOOLS/server.py" ]]; then
     python3 - "$KB_TOOLS/server.py" "$KB_NAME" <<'PYSERVER'
-import sys
+import sys, re
 from pathlib import Path
 
 tool_path = Path(sys.argv[1])
 kb_name = sys.argv[2]
 
 content = tool_path.read_text()
-content = content.replace(
-    'print(f"\\n  Catholic Knowledge Base — Web UI")',
-    f'print(f"\\n  {kb_name} — Web UI")'
-)
-tool_path.write_text(content)
-print(f"  Patched server.py title to: {kb_name}")
+
+# Replace any hardcoded title in a print statement with the KB name
+# Matches patterns like: print(f"\n  Some Title — Web UI") or print("Some Title")
+pattern = r'print\((?:f)?["\']\\n\s+[^"\']+["\']\)'
+match = re.search(pattern, content)
+if match:
+    new_stmt = f'print(f"\\n  {kb_name} — Web UI")'
+    content = content[:match.start()] + new_stmt + content[match.end():]
+    tool_path.write_text(content)
+    print(f"  Patched server.py title to: {kb_name}")
+else:
+    print("  WARNING: Could not find title pattern in server.py")
 PYSERVER
 fi
 
-# Patch build-indexes.py test command
+# Patch build-indexes.py to use a generic test query
 if [[ -f "$KB_TOOLS/build-indexes.py" ]]; then
     python3 - "$KB_TOOLS/build-indexes.py" <<'PYINDEX'
-import sys
+import sys, re
 from pathlib import Path
 
 tool_path = Path(sys.argv[1])
 content = tool_path.read_text()
-content = content.replace(
-    'log("Test with: python3 kb-tools/search.py --mode auto \'transubstantiation\'")',
-    'log("Test with: python3 kb-tools/search.py --mode auto \'your query\'")'
-)
-tool_path.write_text(content)
+
+# Replace any hardcoded test query in a log statement with a generic placeholder
+# Matches patterns like: log("Test with: ... 'specific_term'")
+pattern = r'log\(["\']Test with:.*?["\']\)'
+match = re.search(pattern, content)
+if match:
+    new_log = 'log("Test with: python3 kb-tools/search.py --mode auto \'your query\'")'
+    content = content[:match.start()] + new_log + content[match.end():]
+    tool_path.write_text(content)
+    print("  Patched build-indexes.py test query")
+else:
+    print("  WARNING: Could not find test query pattern in build-indexes.py")
 PYINDEX
 fi
 

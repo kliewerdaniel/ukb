@@ -57,7 +57,7 @@ ollama pull nomic-embed-text
 ```
 project/
 ├── sources/               # Input markdown files
-├── start.sh               # Build script (from money01/)
+├── start.sh               # Build script
 ├── ex.sspec               # Example spec template
 ├── my-kb.sspec            # Your knowledge base spec
 ├── kbmd/                  # Organized sources (auto-generated)
@@ -152,10 +152,10 @@ Second paragraph.
 4. **Import sources** — Copy .md files into `kbmd/<category>/`
 5. **Generate manifest** — `manifest.json` from imported files
 6. **Generate config** — `kb-config.json` with KB name, paths, prompt
-7. **Patch tools** — Replace hardcoded Catholic topics/prompts with yours
+7. **Patch tools** — Replace any hardcoded domain-specific content with your configuration
 8. **Build catalog** — `catalog.json` with document metadata
 9. **Chunk documents** — Split into ~2000-token pieces
-10. **Extract references** — Scripture/CCC/Canon patterns (if present)
+10. **Extract references** — Custom reference patterns from your .sspec (if defined)
 11. **Build cross-references** — Document citation graph
 12. **Build topic index** — Map topics to document locations
 13. **Generate embeddings** — Vector index via Ollama (optional)
